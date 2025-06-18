@@ -6,7 +6,6 @@ import pandas as pd
 from matplotlib.axes import Axes
 
 from indicators.base import Indicator, PlotStyle, PlotPosition
-from candle import CandleFrame
 
 
 class RSI(Indicator):
@@ -29,7 +28,7 @@ class RSI(Indicator):
             minmax=(0, 100),
         )
 
-    def build(self, data: CandleFrame, name: str = 'rsi') -> CandleFrame:
+    def build(self, data: pd.DataFrame, name: str = 'rsi') -> pd.DataFrame:
         delta = data[self.col].diff()
 
         up = delta.copy()
@@ -46,13 +45,13 @@ class RSI(Indicator):
         result = pd.Series(np.round(rsi, 2))
         result.index = data.index
 
-        return CandleFrame.from_dataframe(result.to_frame('rsi'))
+        return result.to_frame('rsi')
 
     @property
     def name(self) -> str:
         return f'RSI {self.period}'
 
-    def plot(self, data: CandleFrame, axes: Axes) -> None:
+    def plot(self, data: pd.DataFrame, axes: Axes) -> None:
         axes.plot(
             range(len(data['rsi'])),
             data['rsi'],

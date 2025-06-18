@@ -4,7 +4,6 @@ from matplotlib.axes import Axes
 
 from .base import Indicator, PlotPosition
 from .rsi import RSI
-from candle import CandleFrame
 
 class StochasticRSI(Indicator):
 
@@ -16,7 +15,7 @@ class StochasticRSI(Indicator):
         self.d = d
         self.col = col
 
-    def build(self, data: CandleFrame) -> CandleFrame:
+    def build(self, data: pd.DataFrame) -> pd.DataFrame:
         rsi = RSI(self.period).build(data)
         stochastic_rsi = (
             100
@@ -29,13 +28,13 @@ class StochasticRSI(Indicator):
         result = pd.Series(k_values.rolling(self.d).mean()['rsi'])
         result.index = data.index
 
-        return CandleFrame.from_dataframe(result.to_frame('stoch_rsi'))
+        return result.to_frame('stoch_rsi')
 
     @property
     def name(self) -> str:
         return f'StochRSI {self.d} {self.k}'
 
-    def plot(self, data: CandleFrame, axes: Axes) -> None:
+    def plot(self, data: pd.DataFrame, axes: Axes) -> None:
         axes.plot(
             range(len(data['stoch_rsi'])),
             data['stoch_rsi'],

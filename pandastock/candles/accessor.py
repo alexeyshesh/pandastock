@@ -1,81 +1,44 @@
-from datetime import datetime
+from collections import defaultdict
 
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 
-from matplotlib.patches import Rectangle
 from matplotlib.axes import Axes
+from matplotlib.patches import Rectangle
 
-from indicators.base import Indicator, PlotStyle, PlotPosition
+from pandastock.indicators.base import Indicator, PlotPosition
 
 
-class CandleFrame(pd.DataFrame):
+@pd.api.extensions.register_dataframe_accessor('candles')
+class CandlesAccessor:
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, pandas_obj):
+        self._validate(pandas_obj)
+        self._obj = pandas_obj
 
         self._indicators: dict[str, Indicator] = {}
-        self._indicator_results: dict[str, CandleFrame] = {}
 
-    @staticmethod
-    def _prepare_dataframe(
-        df: pd.DataFrame,
-        agg: str | None = None,
-        remove_weekend: bool = False,
-    ) -> pd.DataFrame:
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        if remove_weekend:
-            df = df[
-                df['timestamp']
-                .apply(lambda x: (x.weekday() < 5))
-            ]
-        df.set_index('timestamp', inplace=True)
+        # {RSI(...): {'rsi_14__rsi': 'rsi'}}
+        self._indicators_col_names_mappings: dict[Indicator, dict[str, str]] = defaultdict(dict)
 
-        if agg:
-            return (
-                df
-                .resample(agg)
-                .agg(
-                    {
-                        'open': 'first',
-                        'high': 'max',
-                        'low': 'min',
-                        'close': 'last',
-                        'volume': 'sum',
-                    },
-                )
-                .dropna()
+    def _validate(self, pandas_obj):
+        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        if not all(col in pandas_obj.columns for col in required_columns):
+            raise AttributeError(
+                'DataFrame must have columns: {}'.format(', '.join(required_columns)),
             )
-        return df.dropna()
-
-    @classmethod
-    def from_dataframe(cls, df: pd.DataFrame):
-        return cls(data=df.values, index=df.index, columns=df.columns)
-
-    @classmethod
-    def from_csv(
-        cls,
-        path: str,
-        agg: str | None = None,
-        remove_weekend: bool = False,
-        **kwargs,
-    ):
-        df = pd.read_csv(path, **kwargs)
-        df = cls._prepare_dataframe(df, agg, remove_weekend)
-        return cls(data=df.values, index=df.index, columns=df.columns)
 
     def add_indicators(self, **kwargs: Indicator) -> None:
         self._indicators.update(kwargs)
-
         for name, indicator in kwargs.items():
-            indicator_values = indicator.build(self)
-            self._indicator_results[name] = indicator_values
-
-            for col in indicator_values:
-                self[f'{name}__{col}'] = indicator_values[col]
+            indicator_values = indicator.build(self._obj)
+            for col in indicator.build(self._obj):
+                new_col = f'{name}__{col}'
+                self._obj[new_col] = indicator_values[col]
+                self._indicators_col_names_mappings[indicator][new_col] = col  # type: ignore
 
     def _plot_candles(self, left: int, right: int, axis: Axes) -> None:
-        for idx, (time, row) in enumerate(self[left:right].iterrows()):
+        for idx, (time, row) in enumerate(self._obj[left:right].iterrows()):
             color = 'g' if row['close'] >= row['open'] else 'r'
             axis.plot([idx, idx], [row['low'], row['high']], color='black', linewidth=1)
             axis.add_patch(
@@ -92,7 +55,7 @@ class CandleFrame(pd.DataFrame):
     def _plot_volume(self, left: int, right: int, axes: Axes) -> None:
         axes.bar(
             range(right - left),
-            self[left:right]['volume'],
+            self._obj[left:right]['volume'],
             color='skyblue',
             width=0.8,
             alpha=0.7,
@@ -107,8 +70,17 @@ class CandleFrame(pd.DataFrame):
             for n, i in self._indicators.items()
             if i.plot_position == PlotPosition.over
         }
-        for name, indicator in indicators.items():
-            indicator.plot(self._indicator_results[name][left:right], axes)
+
+        for _, indicator in indicators.items():
+            indicator.plot(
+                (
+                    self
+                    ._obj[left:right][list(self._indicators_col_names_mappings[indicator].values())]
+                    .rename(columns=self._indicators_col_names_mappings[indicator])
+                ),
+                axes,
+            )
+
 
     def _plot_indicators_under(self, left: int, right: int, axes_list: list[Axes]) -> None:
         indicators = {
@@ -116,18 +88,25 @@ class CandleFrame(pd.DataFrame):
             for n, i in self._indicators.items()
             if i.plot_position == PlotPosition.under
         }
-        for axes, (name, indicator) in zip(axes_list, indicators.items()):
-            indicator.plot(self._indicator_results[name][left:right], axes)
+        for axes, (_, indicator) in zip(axes_list, indicators.items()):
+            indicator.plot(
+                (
+                    self
+                    ._obj[left:right][list(self._indicators_col_names_mappings[indicator].keys())]
+                    .rename(columns=self._indicators_col_names_mappings[indicator])
+                ),
+                axes,
+            )
 
-    def plot(  # type: ignore
+    def plot(
         self,
         center_time: pd.Timestamp | str,
         window: int = 30,
         figsize: tuple[int, int] = (14, 10),
     ) -> None:
-        center_loc: int = self.index.get_loc(center_time)  # type: ignore
+        center_loc: int = self._obj.index.get_loc(center_time)  # type: ignore
         left = max(center_loc - window, 0)
-        right = min(center_loc + window + 1, len(self))
+        right = min(center_loc + window + 1, len(self._obj))
 
         subplots_count = (
             2
@@ -148,7 +127,7 @@ class CandleFrame(pd.DataFrame):
 
         # --- xticks с поворотом ---
         xticks_idx = range(0, (right - left), max(1, (right - left) // 10))
-        xticks_labels = [self[left:right].index[i].strftime("%m-%d %H:%M") for i in xticks_idx]
+        xticks_labels = [self._obj[left:right].index[i].strftime("%m-%d %H:%M") for i in xticks_idx]
         axes[-1].set_xticks(xticks_idx)
         axes[-1].set_xticklabels(xticks_labels, rotation=45)
 
@@ -159,3 +138,5 @@ class CandleFrame(pd.DataFrame):
 
         plt.tight_layout()
         plt.show()
+
+

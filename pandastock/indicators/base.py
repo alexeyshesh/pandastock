@@ -1,14 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import auto, StrEnum
-from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from matplotlib.axes import Axes
-
-if TYPE_CHECKING:
-    from candle import CandleFrame
 
 
 class PlotPosition(StrEnum):
@@ -32,9 +28,9 @@ class Indicator(ABC):
         pass
 
     @abstractmethod
-    def build(self, data: 'CandleFrame') -> 'CandleFrame':
+    def build(self, data: pd.DataFrame) -> pd.DataFrame:
         ...
 
     @abstractmethod
-    def plot(self, data: 'CandleFrame', axes: Axes):
+    def plot(self, data: pd.DataFrame, axes: Axes):
         ...

@@ -75,7 +75,7 @@ class CandlesAccessor:
             indicator.plot(
                 (
                     self
-                    ._obj[left:right][list(self._indicators_col_names_mappings[indicator].values())]
+                    ._obj[left:right][list(self._indicators_col_names_mappings[indicator].keys())]
                     .rename(columns=self._indicators_col_names_mappings[indicator])
                 ),
                 axes,

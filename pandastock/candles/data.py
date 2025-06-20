@@ -2,11 +2,13 @@ import os
 
 import pandas as pd
 
+from pandastock.candles.types import CandlesDataFrame
+
 def _prepare_dataframe(
     df: pd.DataFrame,
     agg: str | None = None,
     remove_weekend: bool = False,
-) -> pd.DataFrame:
+) -> CandlesDataFrame:
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     if remove_weekend:
         df = df[
@@ -16,7 +18,7 @@ def _prepare_dataframe(
     df.set_index('timestamp', inplace=True)
 
     if agg:
-        return (
+        return (  # type: ignore
             df
             .resample(agg)
             .agg(
@@ -30,10 +32,14 @@ def _prepare_dataframe(
             )
             .dropna()
         )
-    return df.dropna()
+    return df.dropna() # type: ignore
 
 
-def read_candles_from_csv(path: str, agg: str | None = None, remove_weekend: bool = False):
+def read_candles_from_csv(
+    path: str,
+    agg: str | None = None,
+    remove_weekend: bool = False,
+) -> CandlesDataFrame:
     df = pd.read_csv(path)
     return _prepare_dataframe(df, agg, remove_weekend)
 
@@ -42,7 +48,7 @@ def read_candles_from_csv_list(
     path_list: list[str],
     agg: str | None = None,
     remove_weekend: bool = False,
-):
+) -> CandlesDataFrame:
     df_list = [pd.read_csv(path) for path in path_list]
     return _prepare_dataframe(pd.concat(df_list), agg, remove_weekend)
 
@@ -54,7 +60,7 @@ def read_candles_csv_range(
     agg: str | None = None,
     remove_weekend: bool = False,
     extension: str = 'csv',
-):
+) -> CandlesDataFrame:
     files = os.listdir(dir)
     from_ = from_ or min(files)
     to_ = to_ or max(files)

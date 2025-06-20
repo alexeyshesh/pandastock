@@ -101,12 +101,22 @@ class CandlesAccessor:
     def plot(
         self,
         center_time: pd.Timestamp | str,
+        from_: pd.Timestamp | str | None = None,
+        to_: pd.Timestamp | str | None = None,
         window: int = 30,
         figsize: tuple[int, int] = (14, 10),
     ) -> None:
         center_loc: int = self._obj.index.get_loc(center_time)  # type: ignore
-        left = max(center_loc - window, 0)
-        right = min(center_loc + window + 1, len(self._obj))
+        left = (
+            max(center_loc - window, 0)
+            if not from_
+            else self._obj.index.get_loc(from_)
+        )
+        right = (
+            min(center_loc + window + 1, len(self._obj))
+            if not to_
+            else self._obj.index.get_loc(to_)
+        )
 
         subplots_count = (
             2

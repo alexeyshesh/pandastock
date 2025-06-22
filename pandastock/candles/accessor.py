@@ -38,18 +38,6 @@ class CandlesAccessor:
                 self._indicators_col_names_mappings[indicator][new_col] = col  # type: ignore
 
     def _plot_candles(self, left: int, right: int, axis: Axes) -> None:
-        ax = axes[0]
-        for idx, (time, row) in enumerate(window_df.iterrows()):
-            color = 'g' if row['close'] >= row['open'] else 'r'
-            ax.plot([idx, idx], [row['low'], row['high']], color='black', linewidth=1)
-            ax.add_patch(
-                plt.Rectangle((idx-0.3, min(row['open'], row['close'])),
-                            0.6,
-                            abs(row['close'] - row['open']),
-                            color=color, alpha=0.7)
-            )
-        ax.set_ylabel('Цена')
-
         for idx, (time, row) in enumerate(self._obj[left:right].iterrows()):
             color = 'g' if row['close'] >= row['open'] else 'r'
             axis.plot([idx, idx], [row['low'], row['high']], color='black', linewidth=1)

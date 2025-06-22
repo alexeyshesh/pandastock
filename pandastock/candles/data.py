@@ -61,12 +61,15 @@ def read_candles_csv_range(
     remove_weekend: bool = False,
     extension: str = 'csv',
 ) -> CandlesDataFrame:
+    if dir[-1] == '/':
+        dir = dir[:-1]
+
     files = os.listdir(dir)
     from_ = from_ or min(files)
     to_ = to_ or max(files)
 
     return read_candles_from_csv_list(
-        [f for f in files if (from_ <= f.split(f'.{extension}')[0] <= to_)],
+        [f'{dir}/{f}' for f in files if (from_ <= f.split(f'.{extension}')[0] <= to_)],
         agg,
         remove_weekend,
     )

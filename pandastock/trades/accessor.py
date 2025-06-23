@@ -9,6 +9,10 @@ from pandastock.trades.types import TradesDataFrame
 class TradesAccessor:
     def __init__(self, pandas_obj):
         self._validate(pandas_obj)
+
+        pandas_obj['timestamp_in'] = pd.to_datetime(pandas_obj['timestamp_in'])
+        pandas_obj['timestamp_out'] = pd.to_datetime(pandas_obj['timestamp_out'])
+
         self._obj = pandas_obj
 
         if 'profit' not in pandas_obj.columns:
@@ -45,6 +49,25 @@ class TradesAccessor:
             },
         )
 
+    def print_stats(self) -> None:
+        p = self._obj.copy()
+
+        total_duration = p['timestamp_out'].iloc[-1] - p['timestamp_in'].iloc[0]
+        total_profit = p['profit'].sum()
+        total_trades = len(p)
+        profit_trades_count = len(p[p['profit'] > 0])
+        loss_trades_count = len(p[p['profit'] < 0])
+
+        p.set_index('timestamp_out', inplace=True)
+        expected_daily_profit = p['profit'].resample('1d').sum().mean()
+
+        print(f'Total profit: {total_profit:.2f}')
+        print(f'Total duration: {total_duration}')
+        print(f'Total trades: {total_trades}')
+        print(f'Profit / loss trades: {profit_trades_count} / {loss_trades_count}')
+        print(f'Success rate: {profit_trades_count / total_trades * 100:.2f}%')
+        print(f'Expected daily profit: {expected_daily_profit:.2f}')
+
     def plot_profit_by_time(
         self,
         agg_interval: str = '1d',
@@ -52,16 +75,9 @@ class TradesAccessor:
         to_: pd.Timestamp | str | None = None,
     ) -> None:
         p = self._obj.copy()
-        p['timestamp_in'] = pd.to_datetime(p['timestamp_in'])
-        p['timestamp_out'] = pd.to_datetime(p['timestamp_out'])
-        p['pnl'] = (
-            p.apply(lambda row:
-                row['price_out'] - row['price_in'] if row['direction'] == 'long'
-                else row['price_in'] - row['price_out'], axis=1)
-        )
         p.set_index('timestamp_out', inplace=True)
         p = p.loc[from_:to_]
-        agg = p['pnl'].resample(agg_interval).sum()
+        agg = p['profit'].resample(agg_interval).sum()
 
         colors = np.where(agg >= 0, 'green', 'red')
         fig, ax = plt.subplots(figsize=(14,5))

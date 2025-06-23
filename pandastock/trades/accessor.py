@@ -11,6 +11,9 @@ class TradesAccessor:
         self._validate(pandas_obj)
         self._obj = pandas_obj
 
+        if 'profit' not in pandas_obj.columns:
+            self._add_profit_columns()
+
     def _validate(self, pandas_obj):
         required_columns = ['timestamp_in', 'timestamp_out', 'direction', 'price_in', 'price_out']
         if not all(col in pandas_obj.columns for col in required_columns):
@@ -18,10 +21,7 @@ class TradesAccessor:
                 'DataFrame must have columns: {}'.format(', '.join(required_columns)),
             )
 
-        if 'profit' not in pandas_obj.columns:
-            self._add_profit_column()
-
-    def _add_profit_column(self):
+    def _add_profit_columns(self):
         self._obj['profit'] = self._obj.apply(
             lambda row:(
                 row['price_out'] - row['price_in']
@@ -31,6 +31,7 @@ class TradesAccessor:
             axis=1,
         )
         self._obj['profit_percent'] = self._obj['profit'] / self._obj['price_in'] * 100
+        self._obj['duration'] = self._obj['timestamp_out'] - self._obj['timestamp_in']
 
     @classmethod
     def from_list_of_dicts(cls, trades: list[dict]) -> TradesDataFrame:

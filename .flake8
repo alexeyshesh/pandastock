@@ -1,0 +1,6 @@
+[flake8]
+
+max-expression-complexity = 10
+max-line-length = 100
+import-order-style = edited
+application-import-names = pandastock

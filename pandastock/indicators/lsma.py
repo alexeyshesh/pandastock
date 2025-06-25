@@ -5,6 +5,7 @@ from matplotlib.axes import Axes
 
 from .base import Indicator, PlotPosition
 
+
 class LSMA(Indicator):
 
     plot_position = PlotPosition.over

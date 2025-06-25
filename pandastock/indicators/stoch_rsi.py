@@ -5,6 +5,7 @@ from matplotlib.axes import Axes
 from .base import Indicator, PlotPosition
 from .rsi import RSI
 
+
 class StochasticRSI(Indicator):
 
     plot_position = PlotPosition.under

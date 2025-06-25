@@ -27,7 +27,7 @@ class TradesAccessor:
 
     def _add_profit_columns(self):
         self._obj['profit'] = self._obj.apply(
-            lambda row:(
+            lambda row: (
                 row['price_out'] - row['price_in']
                 if row['direction'] == 'long'
                 else row['price_in'] - row['price_out']
@@ -80,13 +80,13 @@ class TradesAccessor:
         agg = p['profit'].resample(agg_interval).sum()
 
         colors = np.where(agg >= 0, 'green', 'red')
-        fig, ax = plt.subplots(figsize=(14,5))
+        fig, ax = plt.subplots(figsize=(14, 5))
         ax.bar(agg.index.astype(str), agg.values, color=colors, width=0.8, edgecolor='black')
 
         ax.set_title(f'Aggregated PnL by {agg_interval}')
         ax.set_ylabel('Profit')
         ax.set_xlabel('Interval')
         ax.axhline(y=0, color='black', linewidth=1)
-        plt.xticks(rotation=45, ha="right")
+        plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
         plt.show()

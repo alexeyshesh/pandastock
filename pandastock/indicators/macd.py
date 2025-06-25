@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from matplotlib.axes import Axes
 
@@ -31,7 +31,7 @@ class MACD(Indicator):
         return pd.DataFrame({
             'macd': macd_line,
             'signal': signal_line,
-            'histogram': histogram
+            'histogram': histogram,
         })
 
     def plot(self, data: pd.DataFrame, axes: Axes) -> None:
@@ -41,7 +41,7 @@ class MACD(Indicator):
             color='blue',
             alpha=0.8,
             linewidth=1,
-            label='MACD'
+            label='MACD',
         )
         axes.plot(
             range(len(data['signal'])),
@@ -49,7 +49,7 @@ class MACD(Indicator):
             color='orange',
             alpha=0.8,
             linewidth=1,
-            label='Signal'
+            label='Signal',
         )
         axes.bar(
             range(len(data['histogram'])),
@@ -57,6 +57,6 @@ class MACD(Indicator):
             color=np.where(data['histogram'] >= 0, 'green', 'red'),
             alpha=0.3,
             width=0.8,
-            label='Histogram'
+            label='Histogram',
         )
         axes.legend()

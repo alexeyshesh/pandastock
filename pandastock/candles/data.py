@@ -4,6 +4,7 @@ import pandas as pd
 
 from pandastock.candles.types import CandlesDataFrame
 
+
 def _prepare_dataframe(
     df: pd.DataFrame,
     agg: str | None = None,
@@ -32,7 +33,7 @@ def _prepare_dataframe(
             )
             .dropna()
         )
-    return df.dropna() # type: ignore
+    return df.dropna()  # type: ignore
 
 
 def read_candles_from_csv(

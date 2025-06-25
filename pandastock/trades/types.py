@@ -5,6 +5,7 @@ import pandas as pd
 if TYPE_CHECKING:
     from pandastock.trades.accessor import TradesAccessor
 
+
 class TradesDataFrame(pd.DataFrame):
 
     candles: 'TradesAccessor'

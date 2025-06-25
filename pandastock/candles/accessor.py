@@ -1,7 +1,7 @@
 from collections import defaultdict
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from matplotlib.axes import Axes
 from matplotlib.patches import Rectangle
@@ -48,7 +48,7 @@ class CandlesAccessor:
                     abs(row['close'] - row['open']),
                     color=color,
                     alpha=0.7,
-                )
+                ),
             )
         axis.set_ylabel('Price')
 
@@ -80,7 +80,6 @@ class CandlesAccessor:
                 ),
                 axes,
             )
-
 
     def _plot_indicators_under(self, left: int, right: int, axes_list: list[Axes]) -> None:
         indicators = {
@@ -137,7 +136,7 @@ class CandlesAccessor:
 
         # --- xticks с поворотом ---
         xticks_idx = range(0, (right - left), max(1, (right - left) // 10))
-        xticks_labels = [self._obj[left:right].index[i].strftime("%m-%d %H:%M") for i in xticks_idx]
+        xticks_labels = [self._obj[left:right].index[i].strftime('%m-%d %H:%M') for i in xticks_idx]
         axes[-1].set_xticks(xticks_idx)
         axes[-1].set_xticklabels(xticks_labels, rotation=45)
 
@@ -148,5 +147,3 @@ class CandlesAccessor:
 
         plt.tight_layout()
         plt.show()
-
-

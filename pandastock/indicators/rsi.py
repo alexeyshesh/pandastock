@@ -1,11 +1,9 @@
-import matplotlib as plt
-from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
 from matplotlib.axes import Axes
 
-from indicators.base import Indicator, PlotStyle, PlotPosition
+from pandastock.indicators.base import Indicator, PlotPosition, PlotStyle
 
 
 class RSI(Indicator):

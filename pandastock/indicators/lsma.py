@@ -45,7 +45,6 @@ class LSMA(Indicator):
         df.index = data.index
         return df
 
-
     def plot(self, data: pd.DataFrame, axes: Axes) -> None:
         axes.plot(
             range(len(data['lsma'])),

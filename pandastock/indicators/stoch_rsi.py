@@ -3,8 +3,8 @@ import pandas as pd
 
 from matplotlib.axes import Axes
 
-from .base import Indicator, PlotPosition
-from .rsi import RSI
+from pandastock.indicators.base import Indicator, PlotPosition
+from pandastock.indicators.rsi import RSI
 
 
 class StochasticRSI(Indicator):
@@ -16,48 +16,95 @@ class StochasticRSI(Indicator):
         self.k = k
         self.d = d
         self.col = col
-        self._rsi = RSI(period, col)
+
+        # Для потоковой обработки
+        self.rsi_indicator = RSI(period=period, col=col)
         self._rsi_values = []
         self._k_values = []
 
     def next_value(self, candle: pd.Series) -> pd.Series:
-        rsi_value = self._rsi.next_value(candle)['rsi']
+        """Обрабатывает новую свечу и возвращает текущее значение Stochastic RSI."""
+        # Получаем текущее значение RSI
+        rsi_value = self.rsi_indicator.next_value(candle)['rsi']
+
+        # Если RSI еще не рассчитан, возвращаем NaN
+        if np.isnan(rsi_value):
+            return pd.Series({'stoch_rsi': np.nan})
+
+        # Добавляем RSI в историю
         self._rsi_values.append(rsi_value)
 
+        # Если у нас недостаточно RSI значений, возвращаем NaN
         if len(self._rsi_values) < self.period:
             return pd.Series({'stoch_rsi': np.nan})
 
-        # Calculate stochastic RSI
-        current_rsi = self._rsi_values[-1]
-        min_rsi = min(self._rsi_values[-self.period:])
-        max_rsi = max(self._rsi_values[-self.period:])
+        # Оставляем только последние period значений
+        if len(self._rsi_values) > self.period:
+            self._rsi_values = self._rsi_values[-self.period:]
 
+        # Вычисляем Stochastic RSI
+        min_rsi = min(self._rsi_values)
+        max_rsi = max(self._rsi_values)
+
+        # Проверка деления на ноль
         if max_rsi == min_rsi:
-            stoch_rsi = 0.0
+            stoch_rsi = 100  # Если все значения равны, считаем, что StochRSI = 100
         else:
-            stoch_rsi = 100 * (current_rsi - min_rsi) / (max_rsi - min_rsi)
+            stoch_rsi = 100 * (rsi_value - min_rsi) / (max_rsi - min_rsi)
 
+        # Добавляем в историю значений K
         self._k_values.append(stoch_rsi)
 
+        # Если у нас недостаточно K значений, возвращаем NaN
         if len(self._k_values) < self.k:
             return pd.Series({'stoch_rsi': np.nan})
 
-        # Calculate K line (simple moving average of stoch_rsi)
-        if len(self._k_values) < self.k + self.d - 1:
+        # Оставляем только последние k значений для K
+        if len(self._k_values) > self.k:
+            self._k_values = self._k_values[-self.k:]
+
+        # Вычисляем K (среднее за k периодов)
+        k_value = sum(self._k_values) / self.k
+
+        # Добавляем K в историю для D
+        if not hasattr(self, '_d_values'):
+            self._d_values = []
+        self._d_values.append(k_value)
+
+        # Если у нас недостаточно D значений, возвращаем NaN
+        if len(self._d_values) < self.d:
             return pd.Series({'stoch_rsi': np.nan})
 
-        # Calculate D line (simple moving average of K line)
-        d_line = sum(self._k_values[-self.d:]) / self.d
+        # Оставляем только последние d значений для D
+        if len(self._d_values) > self.d:
+            self._d_values = self._d_values[-self.d:]
 
-        return pd.Series({'stoch_rsi': d_line})
+        # Вычисляем D (среднее за d периодов)
+        d_value = sum(self._d_values) / self.d
+
+        return pd.Series({'stoch_rsi': d_value})
 
     def build(self, data: pd.DataFrame) -> pd.DataFrame:
-        result = []
-        for _, row in data.iterrows():
-            result.append(self.next_value(row))
-        df = pd.concat(result, axis=1).T
-        df.index = data.index
-        return df
+        """Векторизованная версия для исторических данных."""
+        # Сбрасываем состояние
+        self._rsi_values = []
+        self._k_values = []
+        if hasattr(self, '_d_values'):
+            self._d_values = []
+
+        # Используем векторизованный подход для исторических данных
+        rsi = RSI(self.period).build(data)
+        stochastic_rsi = (
+            100
+            * (rsi - rsi.rolling(self.period).min())
+            / (rsi.rolling(self.period).max() - rsi.rolling(self.period).min())
+        )
+
+        k_values = stochastic_rsi.rolling(self.k).mean()
+        result = pd.Series(k_values.rolling(self.d).mean()['rsi'])
+        result.index = data.index
+
+        return result.to_frame('stoch_rsi')
 
     @property
     def name(self) -> str:

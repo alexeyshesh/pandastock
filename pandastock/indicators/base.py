@@ -32,5 +32,9 @@ class Indicator(ABC):
         ...
 
     @abstractmethod
+    def next_value(self, data: pd.Series) -> pd.DataFrame:
+        ...
+
+    @abstractmethod
     def plot(self, data: pd.DataFrame, axes: Axes):
         ...

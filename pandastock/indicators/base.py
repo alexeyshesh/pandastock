@@ -32,7 +32,7 @@ class Indicator(ABC):
         ...
 
     @abstractmethod
-    def next_value(self, data: pd.Series) -> pd.Series:
+    def next_value(self, candle: pd.Series) -> pd.Series:
         ...
 
     @abstractmethod

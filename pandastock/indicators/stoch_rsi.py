@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from matplotlib.axes import Axes
@@ -15,21 +16,48 @@ class StochasticRSI(Indicator):
         self.k = k
         self.d = d
         self.col = col
+        self._rsi = RSI(period, col)
+        self._rsi_values = []
+        self._k_values = []
+
+    def next_value(self, candle: pd.Series) -> pd.Series:
+        rsi_value = self._rsi.next_value(candle)['rsi']
+        self._rsi_values.append(rsi_value)
+
+        if len(self._rsi_values) < self.period:
+            return pd.Series({'stoch_rsi': np.nan})
+
+        # Calculate stochastic RSI
+        current_rsi = self._rsi_values[-1]
+        min_rsi = min(self._rsi_values[-self.period:])
+        max_rsi = max(self._rsi_values[-self.period:])
+
+        if max_rsi == min_rsi:
+            stoch_rsi = 0.0
+        else:
+            stoch_rsi = 100 * (current_rsi - min_rsi) / (max_rsi - min_rsi)
+
+        self._k_values.append(stoch_rsi)
+
+        if len(self._k_values) < self.k:
+            return pd.Series({'stoch_rsi': np.nan})
+
+        # Calculate K line (simple moving average of stoch_rsi)
+        if len(self._k_values) < self.k + self.d - 1:
+            return pd.Series({'stoch_rsi': np.nan})
+
+        # Calculate D line (simple moving average of K line)
+        d_line = sum(self._k_values[-self.d:]) / self.d
+
+        return pd.Series({'stoch_rsi': d_line})
 
     def build(self, data: pd.DataFrame) -> pd.DataFrame:
-        rsi = RSI(self.period).build(data)
-        stochastic_rsi = (
-            100
-            * (rsi - rsi.rolling(self.period).min())
-            / (rsi.rolling(self.period).max() - rsi.rolling(self.period).min())
-        )
-
-        k_values = stochastic_rsi.rolling(self.k).mean()
-
-        result = pd.Series(k_values.rolling(self.d).mean()['rsi'])
-        result.index = data.index
-
-        return result.to_frame('stoch_rsi')
+        result = []
+        for _, row in data.iterrows():
+            result.append(self.next_value(row))
+        df = pd.concat(result, axis=1).T
+        df.index = data.index
+        return df
 
     @property
     def name(self) -> str:

@@ -14,20 +14,37 @@ class LSMA(Indicator):
         self.window = window
         self.col = col
 
-    def build(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Вычисляет Least Squares Moving Average по колонке 'close' с заданным окном.
-        """
-        close = data['close']
-        idx = np.arange(self.window)
-        result = [np.nan] * (self.window - 1)
-        for i in range(self.window - 1, len(close)):
-            y = close.iloc[i - self.window+1:i + 1].values
-            A = np.vstack([idx, np.ones(self.window)]).T
-            a, b = np.linalg.lstsq(A, y, rcond=None)[0]
-            result.append(a * (self.window - 1) + b)
+        self.window = window
+        self._values = []
+        self._idx = np.arange(window)
 
-        return pd.Series(result, index=close.index).to_frame('lsma')
+    def next_value(self, candle: pd.Series) -> pd.Series:
+        value = candle[self.col]
+
+        self._values.append(value)
+
+        if len(self._values) < self.window:
+            return pd.Series({'lsma': np.nan})
+
+        # Keep only the most recent window values
+        window_values = self._values[-self.window:]
+
+        # Calculate linear regression with proper type handling
+        window_arr = np.asarray(window_values, dtype=np.float64)
+        A = np.vstack([self._idx, np.ones(self.window)]).T.astype(np.float64)
+        a, b = np.linalg.lstsq(A, window_arr, rcond=None)[0]
+
+        # Return predicted value at end of window
+        return pd.Series({'lsma': a * (self.window - 1) + b})
+
+    def build(self, data: pd.DataFrame) -> pd.DataFrame:
+        result = []
+        for _, row in data.iterrows():
+            result.append(self.next_value(row))
+        df = pd.concat(result, axis=1).T
+        df.index = data.index
+        return df
+
 
     def plot(self, data: pd.DataFrame, axes: Axes) -> None:
         axes.plot(

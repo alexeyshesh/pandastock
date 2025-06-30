@@ -15,24 +15,57 @@ class MACD(Indicator):
         self.slow = slow
         self.signal = signal
         self.col = col
+        self._fast_ema = None
+        self._slow_ema = None
+        self._signal_ema = None
+        self._macd_line = None
 
-    def _ema(self, series: pd.Series, window: int) -> pd.Series:
-        return series.ewm(span=window, adjust=False).mean()
+    def _update_ema(self, value: float, current_ema: float | None, window: int) -> float:
+        if current_ema is None:
+            return value
+        alpha = 2 / (window + 1)
+        return value * alpha + current_ema * (1 - alpha)
+
+    def next_value(self, candle: pd.Series) -> pd.Series:
+        value = candle[self.col]
+
+        # Update EMAs
+        self._fast_ema = self._update_ema(value, self._fast_ema, self.fast)
+        self._slow_ema = self._update_ema(value, self._slow_ema, self.slow)
+
+        if self._fast_ema is None or self._slow_ema is None:
+            return pd.Series({
+                'macd': np.nan,
+                'signal': np.nan,
+                'histogram': np.nan,
+            })
+
+        # Calculate MACD line
+        self._macd_line = self._fast_ema - self._slow_ema
+
+        # Update signal line
+        self._signal_ema = self._update_ema(self._macd_line, self._signal_ema, self.signal)
+
+        if self._signal_ema is None:
+            return pd.Series({
+                'macd': self._macd_line,
+                'signal': np.nan,
+                'histogram': np.nan,
+            })
+
+        return pd.Series({
+            'macd': self._macd_line,
+            'signal': self._signal_ema,
+            'histogram': self._macd_line - self._signal_ema,
+        })
 
     def build(self, data: pd.DataFrame) -> pd.DataFrame:
-        close = data[self.col]
-        fast_ema = self._ema(close, self.fast)
-        slow_ema = self._ema(close, self.slow)
-
-        macd_line = fast_ema - slow_ema
-        signal_line = self._ema(macd_line, self.signal)
-        histogram = macd_line - signal_line
-
-        return pd.DataFrame({
-            'macd': macd_line,
-            'signal': signal_line,
-            'histogram': histogram,
-        })
+        result = []
+        for _, row in data.iterrows():
+            result.append(self.next_value(row))
+        df = pd.concat(result, axis=1).T
+        df.index = data.index
+        return df
 
     def plot(self, data: pd.DataFrame, axes: Axes) -> None:
         axes.plot(

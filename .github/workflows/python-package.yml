@@ -34,4 +34,4 @@ jobs:
         flake8 pandastock tests
     - name: Test with pytest
       run: |
-        pytest
+        PYTHONPATH=. pytest

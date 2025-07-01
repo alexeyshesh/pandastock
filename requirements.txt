@@ -1,4 +1,5 @@
 pandas
+pytest
 matplotlib
 flake8
 flake8-commas

@@ -1,8 +1,11 @@
+from collections import deque
+
+import numpy as np
 import pandas as pd
 
 from matplotlib.axes import Axes
 
-from .base import Indicator, PlotPosition
+from pandastock.indicators.base import Indicator, PlotPosition
 
 
 class SMA(Indicator):
@@ -13,7 +16,24 @@ class SMA(Indicator):
         self.window = window
         self.col = col
 
+        # Для потоковой обработки
+        self._buffer = deque(maxlen=window)
+
+    def next_value(self, candle: pd.Series) -> pd.Series:
+        price = candle[self.col]
+
+        self._buffer.append(price)
+
+        if len(self._buffer) < self.window:
+            return pd.Series({'sma': np.nan})
+
+        sma_value = sum(self._buffer) / self.window
+
+        return pd.Series({'sma': sma_value})
+
     def build(self, data: pd.DataFrame) -> pd.DataFrame:
+        self._buffer.clear()
+
         return (
             data[self.col]
             .rolling(window=self.window, min_periods=self.window)

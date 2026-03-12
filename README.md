@@ -47,7 +47,7 @@ df.candles.add_indicators(
 df.candles.plot('2025-01-13 20:10:00', window=30)
 ```
 
-![example-1.png](img/example-1.png)
+![example-1.png](https://raw.githubusercontent.com/alexeyshesh/pandastock/master/img/example-1.png)
 
 ## Data Loading
 

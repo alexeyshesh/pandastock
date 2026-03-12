@@ -12,14 +12,19 @@ from pandastock.indicators.base import Indicator, PlotPosition
 @pd.api.extensions.register_dataframe_accessor('candles')
 class CandlesAccessor:
 
+    _indicators_storage: dict[int, dict[str, Indicator]] = {}
+    _indicators_mappings_storage: dict[int, dict[Indicator, dict[str, str]]] = {}
+
     def __init__(self, pandas_obj):
         self._validate(pandas_obj)
+
         self._obj = pandas_obj
+        self._obj_id = id(pandas_obj)
 
-        self._indicators: dict[str, Indicator] = {}
-
-        # {RSI(...): {'rsi_14__rsi': 'rsi'}}
-        self._indicators_col_names_mappings: dict[Indicator, dict[str, str]] = defaultdict(dict)
+        if self._obj_id not in self._indicators_storage:
+            self._indicators_storage[self._obj_id] = {}
+        if self._obj_id not in self._indicators_mappings_storage:
+            self._indicators_mappings_storage[self._obj_id] = defaultdict(dict)
 
     def _validate(self, pandas_obj):
         required_columns = ['open', 'high', 'low', 'close', 'volume']
@@ -29,13 +34,13 @@ class CandlesAccessor:
             )
 
     def add_indicators(self, **kwargs: Indicator) -> None:
-        self._indicators.update(kwargs)
+        self._indicators_storage[self._obj_id].update(kwargs)
         for name, indicator in kwargs.items():
             indicator_values = indicator.build(self._obj)
-            for col in indicator.build(self._obj):
+            for col in indicator_values:
                 new_col = f'{name}__{col}'
                 self._obj[new_col] = indicator_values[col]
-                self._indicators_col_names_mappings[indicator][new_col] = col  # type: ignore
+                self._indicators_mappings_storage[self._obj_id][indicator][new_col] = col  # type: ignore
 
     def _plot_candles(self, left: int, right: int, axis: Axes) -> None:
         for idx, (time, row) in enumerate(self._obj[left:right].iterrows()):
@@ -67,7 +72,7 @@ class CandlesAccessor:
     def _plot_indicators_over(self, left: int, right: int, axes: Axes) -> None:
         indicators = {
             n: i
-            for n, i in self._indicators.items()
+            for n, i in self._indicators_storage[self._obj_id].items()
             if i.plot_position == PlotPosition.over
         }
 
@@ -75,8 +80,10 @@ class CandlesAccessor:
             indicator.plot(
                 (
                     self
-                    ._obj[left:right][list(self._indicators_col_names_mappings[indicator].keys())]
-                    .rename(columns=self._indicators_col_names_mappings[indicator])
+                    ._obj[left:right][
+                        list(self._indicators_mappings_storage[self._obj_id][indicator].keys())
+                    ]
+                    .rename(columns=self._indicators_mappings_storage[self._obj_id][indicator])
                 ),
                 axes,
             )
@@ -84,15 +91,17 @@ class CandlesAccessor:
     def _plot_indicators_under(self, left: int, right: int, axes_list: list[Axes]) -> None:
         indicators = {
             n: i
-            for n, i in self._indicators.items()
+            for n, i in self._indicators_storage[self._obj_id].items()
             if i.plot_position == PlotPosition.under
         }
         for axes, (_, indicator) in zip(axes_list, indicators.items()):
             indicator.plot(
                 (
                     self
-                    ._obj[left:right][list(self._indicators_col_names_mappings[indicator].keys())]
-                    .rename(columns=self._indicators_col_names_mappings[indicator])
+                    ._obj[left:right][
+                        list(self._indicators_mappings_storage[self._obj_id][indicator].keys())
+                    ]
+                    .rename(columns=self._indicators_mappings_storage[self._obj_id][indicator])
                 ),
                 axes,
             )
@@ -119,7 +128,11 @@ class CandlesAccessor:
 
         subplots_count = (
             2
-            + sum(1 for i in self._indicators.values() if i.plot_position == PlotPosition.under)
+            + sum(
+                1
+                for i in self._indicators_storage[self._obj_id].values()
+                if i.plot_position == PlotPosition.under
+            )
         )
         _, axes = plt.subplots(
             nrows=subplots_count,  # +1 for volume

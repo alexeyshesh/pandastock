@@ -2,14 +2,12 @@
 
 A simple pandas extension for financial data processing and visualization. Pandastock makes it easy to plot candlestick charts from pandas DataFrames and overlay technical indicators.
 
-## Features
+## Key features
 
-- 📊 **Candlestick Charting**: Beautiful candlestick charts with volume bars
-- 📈 **Technical Indicators**: Built-in support for popular indicators
-- 🎨 **Flexible Plotting**: Indicators can be plotted over or under the main chart
-- 🔄 **Streaming Support**: Real-time indicator calculation with `next_value()`
-- 📁 **Easy Data Loading**: Convenient functions to load candle data from CSV files
-- 🐼 **Pandas Integration**: Seamless pandas DataFrame accessor
+- 📊 **DataFrame Charting:** Build charts right from pandas DataFrame
+- 📈 **Technical Indicators:** Built-in support for most popular indicators and interface for adding new indicators
+- 🔄 **Streaming support:** Real-time indicator calculation with `next_value()`
+- 📁 **Easy Data Loading**: Convenient functions to load candle data from single CSV file, list of files or directory
 
 ## Installation
 
@@ -24,12 +22,6 @@ git clone https://github.com/alexeyshesh/pandastock.git
 cd pandastock
 pip install -e .
 ```
-
-## Requirements
-
-- Python >= 3.11
-- pandas
-- matplotlib
 
 ## Quick Start
 
@@ -54,6 +46,8 @@ df.candles.add_indicators(
 # Plot the chart
 df.candles.plot('2025-01-13 20:10:00', window=30)
 ```
+
+![example-1.png](img/example-1.png)
 
 ## Data Loading
 
@@ -104,9 +98,15 @@ df = read_candles_csv_range(
 
 ## Available Indicators
 
-### RSI (Relative Strength Index)
+Pandastock provides several built-in indicators:
 
-Measures the speed and change of price movements.
+- RSI (Relative Strength Index)
+- SMA (Simple Moving Average)
+- LSMA (Least Squares Moving Average)
+- MACD (Moving Average Convergence Divergence)
+- Stochastic RSI
+
+Example:
 
 ```python
 from pandastock.indicators import RSI
@@ -120,98 +120,6 @@ rsi_20 = RSI(period=20)
 # Add to dataframe
 df.candles.add_indicators(rsi=rsi)
 ```
-
-**Parameters:**
-- `period` (int): RSI period, default 14
-- `col` (str): Column to calculate RSI on, default 'close'
-
-### SMA (Simple Moving Average)
-
-Calculates the average price over a specified period.
-
-```python
-from pandastock.indicators import SMA
-
-# Create SMA with default window (15)
-sma = SMA()
-
-# Custom window
-sma_50 = SMA(window=50)
-
-# Add to dataframe
-df.candles.add_indicators(sma_20=SMA(window=20), sma_50=SMA(window=50))
-```
-
-**Parameters:**
-- `window` (int): Moving average window size, default 15
-- `col` (str): Column to calculate SMA on, default 'close'
-
-### LSMA (Least Squares Moving Average)
-
-Linear regression-based moving average that fits a line to the data.
-
-```python
-from pandastock.indicators import LSMA
-
-# Create LSMA with default window (15)
-lsma = LSMA()
-
-# Custom window
-lsma_30 = LSMA(window=30)
-
-# Add to dataframe
-df.candles.add_indicators(lsma=lsma)
-```
-
-**Parameters:**
-- `window` (int): Moving average window size, default 15
-- `col` (str): Column to calculate LSMA on, default 'close'
-
-### MACD (Moving Average Convergence Divergence)
-
-Trend-following momentum indicator that shows the relationship between two moving averages.
-
-```python
-from pandastock.indicators import MACD
-
-# Create MACD with default parameters (12, 26, 9)
-macd = MACD()
-
-# Custom parameters
-macd_custom = MACD(fast=10, slow=20, signal=8)
-
-# Add to dataframe
-df.candles.add_indicators(macd=macd)
-```
-
-**Parameters:**
-- `fast` (int): Fast EMA period, default 12
-- `slow` (int): Slow EMA period, default 26
-- `signal` (int): Signal line period, default 9
-- `col` (str): Column to calculate MACD on, default 'close'
-
-### Stochastic RSI
-
-Combines Stochastic Oscillator and RSI to generate more reliable signals.
-
-```python
-from pandastock.indicators import StochasticRSI
-
-# Create Stochastic RSI with default parameters (14, 3, 3)
-stoch_rsi = StochasticRSI()
-
-# Custom parameters
-stoch_rsi_custom = StochasticRSI(period=14, k=3, d=3)
-
-# Add to dataframe
-df.candles.add_indicators(stoch_rsi=stoch_rsi)
-```
-
-**Parameters:**
-- `period` (int): RSI period, default 14
-- `k` (int): %K smoothing period, default 3
-- `d` (int): %D smoothing period, default 3
-- `col` (str): Column to calculate Stochastic RSI on, default 'close'
 
 ## Plotting
 
@@ -332,7 +240,7 @@ timestamp,open,high,low,close,volume
 
 ## License
 
-MIT License - see LICENSE file for details.
+GPL 3.0 License - see LICENSE file for details.
 
 ## Contributing
 

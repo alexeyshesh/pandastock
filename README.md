@@ -55,8 +55,6 @@ df.candles.add_indicators(
 df.candles.plot('2025-01-13 20:10:00', window=30)
 ```
 
-![example-1.png](img/example-1.png)
-
 ## Data Loading
 
 Pandastock provides several convenient functions to load candlestick data:

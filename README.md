@@ -1,6 +1,6 @@
 # Pandastock
 
-A powerful pandas extension for financial data processing and visualization. Pandastock makes it easy to plot candlestick charts from pandas DataFrames and overlay technical indicators.
+A simple pandas extension for financial data processing and visualization. Pandastock makes it easy to plot candlestick charts from pandas DataFrames and overlay technical indicators.
 
 ## Features
 
@@ -54,6 +54,8 @@ df.candles.add_indicators(
 # Plot the chart
 df.candles.plot('2025-01-13 20:10:00', window=30)
 ```
+
+![example-1.png](img/example-1.png)
 
 ## Data Loading
 
